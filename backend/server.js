@@ -1,6 +1,8 @@
-if (process.env.NODE_ENV != "production") {
+// --- ENV ---
+if (process.env.NODE_ENV !== "production") {
   require("dotenv").config();
 }
+
 // --- Imports ---
 const express = require("express");
 const mongoose = require("mongoose");
@@ -13,73 +15,65 @@ const MongoStore = require("connect-mongo");
 // --- Utils ---
 const ExpressError = require("./utils/ExpressError.js");
 
-// -- Routers --
-const authRouter = require('./routes/authRouter.js');
-const profileRouter = require('./routes/profileRouter.js');
+// --- Routers ---
+const authRouter = require("./routes/authRouter.js");
+const profileRouter = require("./routes/profileRouter.js");
 const reportsRouter = require("./routes/reportsRouter.js");
-const eventsRouter = require('./routes/eventsRouter.js');
-const committeeRouter = require('./routes/committeeRouter.js');
-const shopRouter = require('./routes/shopRouter.js');
-const ospRouter = require('./routes/ospRouter.js');
-const trainingRouter = require('./routes/trainingRouter.js');
-const recycleRouter = require('./routes/recycleRouter.js');
-const officialRouter = require('./routes/officialRouter.js');
-const wasteSubmissionRouter = require('./routes/wasteSubmissionRouter.js');
+const eventsRouter = require("./routes/eventsRouter.js");
+const committeeRouter = require("./routes/committeeRouter.js");
+const shopRouter = require("./routes/shopRouter.js");
+const ospRouter = require("./routes/ospRouter.js");
+const trainingRouter = require("./routes/trainingRouter.js");
+const recycleRouter = require("./routes/recycleRouter.js");
+const officialRouter = require("./routes/officialRouter.js");
+const wasteSubmissionRouter = require("./routes/wasteSubmissionRouter.js");
 
 // --- Models ---
 const User = require("./schemas/User.js");
 
-// -- ENV Requirements --
-const SESSION_SECRET = process.env.SESSION_SECRET || "your_session_secret_here";
-
-// --- Server settings ---
-// Express setup
-const port = process.env.PORT;
+// --- App ---
 const app = express();
 
-// MongoDB setup
-const dbURI =
-  process.env.NODE_ENV === "production"
-    ? process.env.CLOUD_DB_URI
-    : process.env.DB_URI;
+// --- ENV VARIABLES ---
+const PORT = process.env.PORT || 3000;
+const SESSION_SECRET = process.env.SESSION_SECRET || "your_session_secret_here";
+const MONGO_URL = process.env.MONGO_URL;
 
-main()
-  .then(() => {
-    console.log("Connection to MongoDB successful!");
-  })
-  .catch((err) => {
-    console.log("Error connecting to MongoDB. Error: " + err.message);
-  });
-
-async function main() {
-  await mongoose.connect(dbURI);
+// Safety check 
+if (!MONGO_URL) {
+  throw new Error("MONGO_URL is missing in environment variables");
 }
 
-// Store code
+// --- MongoDB Connection ---
+mongoose
+  .connect(MONGO_URL)
+  .then(() => console.log(" MongoDB connected successfully"))
+  .catch((err) => console.log(" MongoDB connection error:", err));
+
+// --- Session Store ---
 const store = MongoStore.create({
-  mongoUrl: dbURI,
-  touchAfter: 24 * 3600, // Interval (in seconds) between session updates    (Update information after 23 hours)
-});
-store.on("error", (err) => {
-  console.log("ERROR in MONGO SESSION STORE", err);
+  mongoUrl: MONGO_URL,
+  touchAfter: 24 * 3600,
 });
 
-// Session Setup
-// Session Code
+store.on("error", (err) => {
+  console.log(" MONGO SESSION STORE ERROR", err);
+});
+
+// --- Session Config ---
 const sessionOptions = {
   secret: SESSION_SECRET,
   resave: false,
-  saveUninitialized: true,
-  // Cookie options below
-  cookie: {
-    expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Current time * No of days * no of hours in one day * no of minutes in an hour * no of seconds in a min * no of milliseconds in a second
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-    httpOnly: true, // For security purposes => Cross scripting attacks are prevented at this step
-  },
+  saveUninitialized: false,
   store: store,
+  cookie: {
+    expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    httpOnly: true,
+  },
 };
 
-//Server setup
+// --- Middleware ---
 app.use(
   cors({
     origin:
@@ -89,39 +83,43 @@ app.use(
     credentials: true,
   })
 );
+
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(session(sessionOptions));
+
 app.use(passport.initialize());
 app.use(passport.session());
-// Google strategy here
+
+// --- Passport Setup ---
+passport.use(new LocalStrategy(User.authenticate()));
 passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
-passport.use(new LocalStrategy(User.authenticate()));
 
 // --- Routes ---
-app.use('/auth', authRouter);
-app.use('/profile', profileRouter);
-app.use('/reports', reportsRouter);
-app.use('/events', eventsRouter);
-app.use('/committees', committeeRouter);
-app.use('/shop', shopRouter);
-app.use('/osp', ospRouter);
-app.use('/training', trainingRouter);
-app.use('/recycle', recycleRouter);
-app.use('/official', officialRouter);
-app.use('/waste-submission', wasteSubmissionRouter);
+app.use("/auth", authRouter);
+app.use("/profile", profileRouter);
+app.use("/reports", reportsRouter);
+app.use("/events", eventsRouter);
+app.use("/committees", committeeRouter);
+app.use("/shop", shopRouter);
+app.use("/osp", ospRouter);
+app.use("/training", trainingRouter);
+app.use("/recycle", recycleRouter);
+app.use("/official", officialRouter);
+app.use("/waste-submission", wasteSubmissionRouter);
 
-// x. Default Route
-app.get("/", async (req, res) => {
-  console.log(`Backend active!`);
+// --- Root Route ---
+app.get("/", (req, res) => {
+  res.send("Backend is running ");
 });
 
-// -- Error handling routes --
+// --- 404 Handler ---
 app.use((req, res, next) => {
   next(new ExpressError(404, "API not found!"));
 });
 
-app.listen(port, () => {
-  console.log(`Server listening on port ${port}`);
+// --- Start Server ---
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
