@@ -1,17 +1,10 @@
-import axios from 'axios';
+import axios from "axios";
 
-const ENVIRONMENT = process.env.REACT_APP_ENVIRONMENT || "development";
-
-const API_BASE = ENVIRONMENT === "development"
-  ? process.env.REACT_APP_API_URL_LOCAL
-  : process.env.REACT_APP_API_URL_PROD;
-  
 const api = axios.create({
-  baseURL: API_BASE,
-  withCredentials: true, // automatically applied for all requests
+  baseURL: "https://greensathi.onrender.com",
+  withCredentials: true,
 });
 
-// JWT tokens for Committee Authentication
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("committeeToken");
   if (token) {
@@ -19,6 +12,5 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
-
 
 export default api;
