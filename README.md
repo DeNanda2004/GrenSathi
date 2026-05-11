@@ -118,18 +118,6 @@ An intelligent, dual-source cleanliness monitoring platform that leverages AI an
 
 ---
 
-## 📸 Screenshots & Demos
 
-> _Coming Soon..._
-
----
-
-## 📬 Contact
-
-For questions or collaboration:
-- 📧 [ninadwalke00@gmail.com]
-- 🌐 [LinkedIn](https://www.linkedin.com/in/ninad-walke-3a0a52262/)
-
----
 
 ## 🇮🇳 Made with purpose for **Swachhata** and **Life** 🌱
